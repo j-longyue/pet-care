@@ -4,6 +4,10 @@ const initDb = async () => {
     const queryText = `
     DO $$
     BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+            CREATE TYPE user_role AS ENUM ('adm', 'mod', 'common');
+        END IF;
+
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_plan') THEN
             CREATE TYPE user_plan AS ENUM ('free', 'premium', 'vip');
         END IF;
@@ -12,6 +16,33 @@ const initDb = async () => {
             CREATE TYPE subscription_status AS ENUM ('active', 'canceled', 'past_due');
         END IF;
     END $$;
+
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        role user_role DEFAULT 'common' NOT NULL,
+        plan user_plan DEFAULT 'free' NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        username VARCHAR(40) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        profile_picture TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        reset_password_token VARCHAR(255),
+        reset_password_expires TIMESTAMP,
+        plan_status subscription_status DEFAULT 'active' NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS deleted_users_log (
+        id SERIAL PRIMARY KEY,
+        deleted_user_id INTEGER NOT NULL,
+        deleted_user_name VARCHAR(100),
+        deleted_user_email VARCHAR(100),
+        deleted_user_role user_role,
+        deleted_by_id INTEGER NOT NULL,
+        deleted_by_name VARCHAR(100),
+        deleted_by_role user_role,
+        deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
     `;
     
     try {
@@ -21,3 +52,5 @@ const initDb = async () => {
         console.error(`Error initializing the database: ${error}`)
     }
 }
+
+module.exports = initDb;
