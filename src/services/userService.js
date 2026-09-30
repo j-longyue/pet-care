@@ -13,6 +13,7 @@ const {
   PASSWORD_MAX_LENGTH,
 } = require('../dtos/userDTO');
 const { sendWelcomeEmail } = require('../utils/mailer');
+const { parsePagination, parseSort, buildPaginatedResponse } = require('../utils/forPages');
 
 const VALID_ROLES = ['adm', 'mod', 'common'];
 
@@ -44,12 +45,17 @@ const createUser = async (rawData, requestingUser) => {
   return toUserResponseDTO(newUser);
 };
 
-const getAllUsers = async (requestingUser) => {
+const getAllUsers = async (requestingUser, query = {}) => {
   if (!requestingUser || requestingUser.role !== 'adm') {
     throw new Error('Access denied. Admins only.');
   }
-  const users = await userRepository.findAll();
-  return users.map(toUserResponseDTO);
+
+  const pagination = parsePagination(query);
+  const sort = parseSort(query, userRepository.SORTABLE_FIELDS, 'id', 'ASC');
+
+  const { items, total } = await userRepository.findAll({ ...pagination, sort });
+
+  return buildPaginatedResponse(items.map(toUserResponseDTO), total, pagination);
 };
 
 const getUserById = async (id, requestingUser) => {

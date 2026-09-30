@@ -1,6 +1,8 @@
 const userService = require('../services/userService');
 
 const getErrorStatus = (error, fallback = 400) => {
+  if (Number.isInteger(error.status)) return error.status;
+
   const msg = error.message || '';
 
   if (msg.includes('not found')) return 404;
@@ -30,8 +32,8 @@ const createUser = async (req, res) => {
 
 const getUsers = async (req, res) => {
   try {
-    const users = await userService.getAllUsers(req.user);
-    res.status(200).json(users);
+    const result = await userService.getAllUsers(req.user, req.query);
+    res.status(200).json(result);
   } catch (error) {
     res.status(getErrorStatus(error, 500)).json({ error: error.message });
   }

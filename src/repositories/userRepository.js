@@ -10,9 +10,24 @@ const create = async ({ name, username, email, password, role, profile_picture }
   return rows[0];
 };
 
-const findAll = async () => {
-  const { rows } = await db.query('SELECT * FROM users ORDER BY id ASC');
-  return rows;
+const SORTABLE_FIELDS = ['id', 'name', 'username', 'email', 'role', 'plan', 'created_at'];
+
+const findAll = async ({ limit, offset, sort }) => {
+  const field = SORTABLE_FIELDS.includes(sort?.field) ? sort.field : 'id';
+  const direction = sort?.direction === 'DESC' ? 'DESC' : 'ASC';
+
+  const [itemsResult, countResult] = await Promise.all([
+    db.query(
+      `SELECT id, name, username, email, role, plan, profile_picture, created_at
+       FROM users
+       ORDER BY ${field} ${direction}, id ASC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    ),
+    db.query('SELECT COUNT(*)::int AS total FROM users'),
+  ]);
+
+  return { items: itemsResult.rows, total: countResult.rows[0].total };
 };
 
 const findById = async (id) => {
@@ -91,6 +106,7 @@ const updatePlan = async (id, plan) => {
 };
 
 module.exports = {
+  SORTABLE_FIELDS,
   findAll,
   findById,
   findByEmailOrUsername,
