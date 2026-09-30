@@ -1,4 +1,5 @@
 const validator = require('validator');
+const { cleanText } = require('../utils/sanitize');
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_.]{3,30}$/;
 const NAME_REGEX = /^[\p{L}\p{M}\p{N} .'’-]+$/u;
@@ -26,9 +27,6 @@ class ValidationError extends Error {
 
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
-
-const cleanText = (str) =>
-  String(str).normalize('NFKC').replace(new RegExp(CONTROL_CHARS_REGEX, 'g'), '').trim();
 
 const stripTags = (str) =>
   cleanText(str)
@@ -75,7 +73,7 @@ const isValidProfilePicture = (url) => {
   }
 
   if (parsed.protocol !== 'https:') return false;
-  if (parsed.username || parsed.password) return false;
+  if (parsed.username || parsed.password) return false; 
   if (!validator.isFQDN(parsed.hostname, { require_tld: true })) return false;
   return true;
 };

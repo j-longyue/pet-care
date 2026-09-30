@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const { optionalAuth, requireAuth, requireAdmin } = require('../middleware/authMiddleware');
-
+ 
 router.post('/', optionalAuth, userController.createUser);
 
 router.get('/users-list', requireAuth, userController.getUsers);

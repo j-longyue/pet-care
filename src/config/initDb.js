@@ -43,6 +43,26 @@ const initDb = async () => {
         deleted_by_role user_role,
         deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE species (
+        id SERIAL PRIMARY KEY,
+        specie VARCHAR(100) UNIQUE NOT NULL,
+        created_by INT REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP NULL,
+        deleted_by INT REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE deleted_species_log (
+        id SERIAL PRIMARY KEY,
+        deleted_specie_id INT NOT NULL,
+        deleted_specie_name VARCHAR(100) NOT NULL,
+        deleted_by_id INT,
+        deleted_by_name VARCHAR(100),
+        deleted_by_role VARCHAR(20),
+        deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    
     `;
     
     try {
