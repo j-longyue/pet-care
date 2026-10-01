@@ -44,7 +44,7 @@ const initDb = async () => {
         deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE species (
+    CREATE TABLE IF NOT EXISTS species (
         id SERIAL PRIMARY KEY,
         specie VARCHAR(100) UNIQUE NOT NULL,
         created_by INT REFERENCES users(id) ON DELETE SET NULL,
@@ -53,7 +53,7 @@ const initDb = async () => {
         deleted_by INT REFERENCES users(id) ON DELETE SET NULL
     );
 
-    CREATE TABLE deleted_species_log (
+    CREATE TABLE IF NOT EXISTS deleted_species_log (
         id SERIAL PRIMARY KEY,
         deleted_specie_id INT NOT NULL,
         deleted_specie_name VARCHAR(100) NOT NULL,
@@ -63,6 +63,17 @@ const initDb = async () => {
         deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     
+    CREATE TABLE IF NOT EXISTS pets (
+        id SERIAL PRIMARY KEY,
+        specie_id INT REFERENCES species(id) ON DELETE SET NULL,
+        name VARCHAR(100) NOT NULL,
+        pet_picture TEXT,
+        birthday DATE,
+        created_by INT REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP NULL,
+        deleted_by INT REFERENCES users(id) ON DELETE SET NULL
+    );
     `;
     
     try {
