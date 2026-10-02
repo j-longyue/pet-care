@@ -43,11 +43,12 @@ const findByEmailOrUsername = async (email, username) => {
   return rows[0];
 };
 
-const update = async (id, { name, username, email, password, role, profile_picture }) => {
+const update = async (id, { name, username, email, password, role, profile_picture, plan }) => {
   const { rows } = await db.query(
-    `UPDATE users SET name = $1, username = $2, email = $3, password = $4, role = $5, profile_picture = $6
-     WHERE id = $7 RETURNING *`,
-    [name, username, email, password, role, profile_picture, id]
+    `UPDATE users SET name = $1, username = $2, email = $3, password = $4, role = $5, profile_picture = $6,
+       plan = COALESCE($7, plan)
+     WHERE id = $8 RETURNING *`,
+    [name, username, email, password, role, profile_picture, plan, id]
   );
   return rows[0];
 };

@@ -48,3 +48,5 @@ const PLAN_LIMITS = {
         ]
     }
 };
+
+module.exports = { PLAN_LIMITS };

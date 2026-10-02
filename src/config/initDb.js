@@ -74,6 +74,21 @@ const initDb = async () => {
         deleted_at TIMESTAMP NULL,
         deleted_by INT REFERENCES users(id) ON DELETE SET NULL
     );
+
+    CREATE TABLE IF NOT EXISTS pet_access (
+        id SERIAL PRIMARY KEY,
+        pet_id INT NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        can_view BOOLEAN NOT NULL DEFAULT TRUE,
+        can_create BOOLEAN NOT NULL DEFAULT FALSE,
+        can_edit BOOLEAN NOT NULL DEFAULT FALSE,
+        can_delete BOOLEAN NOT NULL DEFAULT FALSE,
+        granted_by INT REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT pet_access_pet_user_key UNIQUE (pet_id, user_id),
+        CONSTRAINT pet_access_view_required CHECK (can_view OR NOT (can_create OR can_edit OR can_delete))
+    );
     `;
     
     try {

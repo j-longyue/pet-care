@@ -6,6 +6,7 @@ const {
   parsePetId,
   toPetResponseDTO,
 } = require('../dtos/petDTO');
+const { resolvePetPermissions } = require('../utils/petPermissions');
 const { parsePagination, parseSort, buildPaginatedResponse } = require('../utils/forPages');
 const {
   ValidationError,
@@ -22,8 +23,6 @@ const assertAuthenticated = (user) => {
 
 const isAdminUser = (user) => user.role === 'adm';
 
-const isOwnerOf = (pet, user) => Number(pet.created_by) === Number(user.id);
-
 const assertSpecieExists = async (specieId) => {
   const specie = await specieRepository.findById(specieId);
   if (!specie) {
@@ -31,15 +30,21 @@ const assertSpecieExists = async (specieId) => {
   }
 };
 
-const findVisiblePetOrThrow = async (id, user) => {
-  const pet = await petRepository.findById(parsePetId(id));
+const isSpecieForeignKeyError = (error) =>
+  error.code === PG_FOREIGN_KEY_VIOLATION && String(error.constraint).includes('specie');
 
-  const visible = pet && (isAdminUser(user) || (isOwnerOf(pet, user) && !pet.deleted_at));
-  if (!visible) {
+const findVisiblePetOrThrow = async (id, user) => {
+  const pet = await petRepository.findById(parsePetId(id), Number(user.id));
+  if (!pet) {
     throw new NotFoundError('Pet not found.');
   }
 
-  return pet;
+  const permissions = resolvePetPermissions(pet, user);
+  if (!permissions.canView) {
+    throw new NotFoundError('Pet not found.');
+  }
+
+  return { pet, permissions };
 };
 
 const createPet = async (body, requestingUser) => {
@@ -50,9 +55,9 @@ const createPet = async (body, requestingUser) => {
 
   try {
     const pet = await petRepository.create(data, Number(requestingUser.id));
-    return toPetResponseDTO(pet, { isAdmin: isAdminUser(requestingUser) });
+    return toPetResponseDTO(pet, requestingUser);
   } catch (error) {
-    if (error.code === PG_FOREIGN_KEY_VIOLATION && String(error.constraint).includes('specie')) {
+    if (isSpecieForeignKeyError(error)) {
       throw new ValidationError('Specie not found.');
     }
     throw error;
@@ -81,7 +86,7 @@ const getAllPets = async (query = {}, requestingUser) => {
   });
 
   return buildPaginatedResponse(
-    items.map((pet) => toPetResponseDTO(pet, { isAdmin })),
+    items.map((pet) => toPetResponseDTO(pet, requestingUser)),
     total,
     pagination
   );
@@ -90,20 +95,20 @@ const getAllPets = async (query = {}, requestingUser) => {
 const getPetById = async (id, requestingUser) => {
   assertAuthenticated(requestingUser);
 
-  const pet = await findVisiblePetOrThrow(id, requestingUser);
-  return toPetResponseDTO(pet, { isAdmin: isAdminUser(requestingUser) });
+  const { pet } = await findVisiblePetOrThrow(id, requestingUser);
+  return toPetResponseDTO(pet, requestingUser);
 };
 
 const updatePet = async (id, body, requestingUser) => {
   assertAuthenticated(requestingUser);
 
-  const pet = await findVisiblePetOrThrow(id, requestingUser);
+  const { pet, permissions } = await findVisiblePetOrThrow(id, requestingUser);
 
   if (pet.deleted_at) {
     throw new NotFoundError('Pet not found.');
   }
 
-  if (!isOwnerOf(pet, requestingUser)) {
+  if (!permissions.isOwner) {
     throw new ForbiddenError('You can only update your own pets.');
   }
 
@@ -115,9 +120,9 @@ const updatePet = async (id, body, requestingUser) => {
 
   let updatedPet;
   try {
-    updatedPet = await petRepository.update(pet.id, data);
+    updatedPet = await petRepository.update(pet.id, data, Number(requestingUser.id));
   } catch (error) {
-    if (error.code === PG_FOREIGN_KEY_VIOLATION && String(error.constraint).includes('specie')) {
+    if (isSpecieForeignKeyError(error)) {
       throw new ValidationError('Specie not found.');
     }
     throw error;
@@ -127,19 +132,19 @@ const updatePet = async (id, body, requestingUser) => {
     throw new NotFoundError('Pet not found.');
   }
 
-  return toPetResponseDTO(updatedPet, { isAdmin: isAdminUser(requestingUser) });
+  return toPetResponseDTO(updatedPet, requestingUser);
 };
 
 const deletePet = async (id, requestingUser) => {
   assertAuthenticated(requestingUser);
 
-  const pet = await findVisiblePetOrThrow(id, requestingUser);
+  const { pet, permissions } = await findVisiblePetOrThrow(id, requestingUser);
 
   if (pet.deleted_at) {
     throw new NotFoundError('Pet not found.');
   }
 
-  if (!isOwnerOf(pet, requestingUser)) {
+  if (!permissions.isOwner) {
     throw new ForbiddenError('You can only delete your own pets.');
   }
 
@@ -148,7 +153,7 @@ const deletePet = async (id, requestingUser) => {
     throw new NotFoundError('Pet not found.');
   }
 
-  return toPetResponseDTO(deletedPet, { isAdmin: isAdminUser(requestingUser) });
+  return toPetResponseDTO(deletedPet, requestingUser);
 };
 
 module.exports = {

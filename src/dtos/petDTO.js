@@ -1,6 +1,7 @@
 const { ValidationError } = require('../utils/errors');
 const { cleanText } = require('../utils/sanitize');
 const { isValidProfilePicture } = require('./userDTO');
+const { resolvePetPermissions } = require('../utils/petPermissions');
 
 const PET_NAME_MIN_LENGTH = 2;
 const PET_NAME_MAX_LENGTH = 100;
@@ -154,7 +155,7 @@ const toDateOnly = (value) => {
   return null;
 };
 
-const toPetResponseDTO = (pet, { isAdmin = false } = {}) => {
+const toPetResponseDTO = (pet, viewer = null) => {
   if (!isPlainObject(pet)) return null;
 
   const dto = {
@@ -168,11 +169,27 @@ const toPetResponseDTO = (pet, { isAdmin = false } = {}) => {
     deletedAt: toISO(pet.deleted_at),
   };
 
-  if (isAdmin) {
-    dto.createdBy = pet.created_by ?? null;
-    dto.createdByUsername = pet.created_by_username ?? null;
-    dto.deletedBy = pet.deleted_by ?? null;
-    dto.deletedByUsername = pet.deleted_by_username ?? null;
+  if (viewer) {
+    const permissions = resolvePetPermissions(pet, viewer);
+
+    dto.isOwner = permissions.isOwner;
+    dto.permissions = {
+      canView: permissions.canView,
+      canCreate: permissions.canCreate,
+      canEdit: permissions.canEdit,
+      canDelete: permissions.canDelete,
+    };
+
+    if (!permissions.isOwner) {
+      dto.ownerUsername = pet.created_by_username ?? null;
+    }
+
+    if (permissions.isAdmin) {
+      dto.createdBy = pet.created_by ?? null;
+      dto.createdByUsername = pet.created_by_username ?? null;
+      dto.deletedBy = pet.deleted_by ?? null;
+      dto.deletedByUsername = pet.deleted_by_username ?? null;
+    }
   }
 
   return dto;

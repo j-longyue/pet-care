@@ -16,6 +16,7 @@ const { sendWelcomeEmail } = require('../utils/mailer');
 const { parsePagination, parseSort, buildPaginatedResponse } = require('../utils/forPages');
 
 const VALID_ROLES = ['adm', 'mod', 'common'];
+const VALID_PLANS = ['free', 'premium', 'vip'];
 
 const createUser = async (rawData, requestingUser) => {
   const validatedData = validateCreateUserDTO(rawData, requestingUser);
@@ -142,6 +143,19 @@ const updateUser = async (id, rawData, requestingUser) => {
     newRole = rawData.role;
   }
 
+  let newPlan = existingUser.plan;
+  if (rawData.plan !== undefined && rawData.plan !== existingUser.plan) {
+    if (!isRequestorAdmin) {
+      throw new Error('Only an admin can change user plans.');
+    }
+
+    if (!VALID_PLANS.includes(rawData.plan)) {
+      throw new Error(`Invalid plan. Valid options: ${VALID_PLANS.join(', ')}`);
+    }
+
+    newPlan = rawData.plan;
+  }
+
   let newPassword = existingUser.password;
   if (rawData.password) {
     if (!isValidPassword(rawData.password)) {
@@ -172,6 +186,7 @@ const updateUser = async (id, rawData, requestingUser) => {
     email: newEmail,
     password: newPassword,
     role: newRole,
+    plan: newPlan,
     profile_picture: isOwnAccount
       ? (rawData.profile_picture ?? existingUser.profile_picture)
       : existingUser.profile_picture,
@@ -235,8 +250,6 @@ const deleteUser = async (id, requestingUser) => {
 };
 
 // ---- PLAN TEMP ---- //
-
-const VALID_PLANS = ['free', 'premium', 'vip'];
 
 const updateUserPlan = async (id, rawData, requestingUser) => {
   if (!requestingUser || requestingUser.role !== 'adm') {
