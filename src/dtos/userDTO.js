@@ -176,6 +176,8 @@ const toUserResponseDTO = (user) => {
     profile_picture: user.profile_picture ?? null,
     createdAt: toISO(user.created_at || user.createdAt),
     plan: user.plan ?? null,
+    plan_status: user.plan_status,
+    plan_expires_at: toISO(user.plan_expires_at),
   };
 };
 

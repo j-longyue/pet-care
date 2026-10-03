@@ -29,7 +29,8 @@ const initDb = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         reset_password_token VARCHAR(255),
         reset_password_expires TIMESTAMP,
-        plan_status subscription_status DEFAULT 'active' NOT NULL
+        plan_status subscription_status DEFAULT 'active' NOT NULL,
+        plan_expires_at TIMESTAMPTZ NULL
     );
 
     CREATE TABLE IF NOT EXISTS deleted_users_log (
@@ -42,6 +43,31 @@ const initDb = async () => {
         deleted_by_name VARCHAR(100),
         deleted_by_role user_role,
         deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        provider VARCHAR(20) NOT NULL,
+        provider_subscription_id VARCHAR(255) NOT NULL,
+        product_id VARCHAR(50) NOT NULL,
+        plan user_plan NOT NULL,
+        status subscription_status NOT NULL DEFAULT 'active',
+        current_period_end TIMESTAMPTZ NOT NULL,
+        canceled_at TIMESTAMPTZ NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT subscriptions_provider_key UNIQUE (provider, provider_subscription_id)
+    );
+ 
+    CREATE TABLE IF NOT EXISTS payment_events (
+        id SERIAL PRIMARY KEY,
+        provider VARCHAR(20) NOT NULL,
+        event_id VARCHAR(255) NOT NULL,
+        type VARCHAR(30) NOT NULL,
+        payload JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT payment_events_key UNIQUE (provider, event_id)
     );
 
     CREATE TABLE IF NOT EXISTS species (

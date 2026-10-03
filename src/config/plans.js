@@ -42,9 +42,9 @@ const PLAN_LIMITS = {
         maxMeasurements: 20,
         maxPetAccess: 10,
         subscriptions: [
-            "monthly_premium",
-            "semester_premium",
-            "annual_premium"
+            "monthly_vip",
+            "semester_vip",
+            "annual_vip"
         ]
     }
 };

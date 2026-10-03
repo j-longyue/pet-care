@@ -43,12 +43,13 @@ const findByEmailOrUsername = async (email, username) => {
   return rows[0];
 };
 
-const update = async (id, { name, username, email, password, role, profile_picture, plan }) => {
+const update = async (id, { name, username, email, password, role, profile_picture }) => {
   const { rows } = await db.query(
-    `UPDATE users SET name = $1, username = $2, email = $3, password = $4, role = $5, profile_picture = $6,
-       plan = COALESCE($7, plan)
-     WHERE id = $8 RETURNING *`,
-    [name, username, email, password, role, profile_picture, plan, id]
+    `UPDATE users
+     SET name = $1, username = $2, email = $3, password = $4, role = $5, profile_picture = $6
+     WHERE id = $7
+     RETURNING *`,
+    [name, username, email, password, role, profile_picture, id]
   );
   return rows[0];
 };
@@ -99,7 +100,7 @@ const updatePasswordAndClearToken = async (userId, hashedPassword) => {
 
 const updatePlan = async (id, plan) => {
   const { rows } = await db.query(
-    `UPDATE users SET plan = $1 WHERE id = $2
+    `UPDATE users SET plan = $1, plan_status = 'active', plan_expires_at = NULL
      RETURNING id, name, username, email, role, plan, profile_picture, created_at`,
     [plan, id]
   );

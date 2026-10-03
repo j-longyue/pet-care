@@ -256,17 +256,22 @@ const updateUserPlan = async (id, rawData, requestingUser) => {
     throw new Error('Access denied. Admins only.');
   }
 
-  const { plan } = rawData;
+  const userId = Number(id);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new Error('Invalid user id.');
+  }
+
+  const plan = rawData?.plan;
   if (!VALID_PLANS.includes(plan)) {
     throw new Error(`Invalid plan. Valid options: ${VALID_PLANS.join(', ')}`);
   }
 
-  const targetUser = await userRepository.findById(id);
+  const targetUser = await userRepository.findById(userId);
   if (!targetUser) {
     throw new Error('User not found');
   }
 
-  const updatedUser = await userRepository.updatePlan(id, plan);
+  const updatedUser = await userRepository.updatePlan(userId, plan);
   return toUserResponseDTO(updatedUser);
 };
 
