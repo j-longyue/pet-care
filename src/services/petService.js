@@ -8,6 +8,7 @@ const {
 } = require('../dtos/petDTO');
 const { resolvePetPermissions } = require('../utils/petPermissions');
 const { parsePagination, parseSort, buildPaginatedResponse } = require('../utils/forPages');
+const { assertLimitAllowed, assertPetWritable, isPetWithinQuota } = require('./planLimitService');
 const {
   ValidationError,
   UnauthorizedError,
@@ -22,6 +23,11 @@ const assertAuthenticated = (user) => {
 };
 
 const isAdminUser = (user) => user.role === 'adm';
+
+const toResponse = (pet, user) => ({
+  ...toPetResponseDTO(pet, user),
+  read_only: !isPetWithinQuota(pet),
+});
 
 const assertSpecieExists = async (specieId) => {
   const specie = await specieRepository.findById(specieId);
@@ -54,8 +60,12 @@ const createPet = async (body, requestingUser) => {
   await assertSpecieExists(data.specie_id);
 
   try {
-    const pet = await petRepository.create(data, Number(requestingUser.id));
-    return toPetResponseDTO(pet, requestingUser);
+    const outcome = await petRepository.createWithLimit(data, Number(requestingUser.id));
+
+    if (outcome.notFound) throw new UnauthorizedError();
+    assertLimitAllowed(outcome);
+
+    return toResponse(outcome.pet, requestingUser);
   } catch (error) {
     if (isSpecieForeignKeyError(error)) {
       throw new ValidationError('Specie not found.');
@@ -86,7 +96,7 @@ const getAllPets = async (query = {}, requestingUser) => {
   });
 
   return buildPaginatedResponse(
-    items.map((pet) => toPetResponseDTO(pet, requestingUser)),
+    items.map((pet) => toResponse(pet, requestingUser)),
     total,
     pagination
   );
@@ -96,7 +106,7 @@ const getPetById = async (id, requestingUser) => {
   assertAuthenticated(requestingUser);
 
   const { pet } = await findVisiblePetOrThrow(id, requestingUser);
-  return toPetResponseDTO(pet, requestingUser);
+  return toResponse(pet, requestingUser);
 };
 
 const updatePet = async (id, body, requestingUser) => {
@@ -111,6 +121,8 @@ const updatePet = async (id, body, requestingUser) => {
   if (!permissions.isOwner) {
     throw new ForbiddenError('You can only update your own pets.');
   }
+
+  assertPetWritable(pet);
 
   const data = validateUpdatePetDTO(body);
 
@@ -132,7 +144,7 @@ const updatePet = async (id, body, requestingUser) => {
     throw new NotFoundError('Pet not found.');
   }
 
-  return toPetResponseDTO(updatedPet, requestingUser);
+  return toResponse(updatedPet, requestingUser);
 };
 
 const deletePet = async (id, requestingUser) => {
@@ -153,7 +165,7 @@ const deletePet = async (id, requestingUser) => {
     throw new NotFoundError('Pet not found.');
   }
 
-  return toPetResponseDTO(deletedPet, requestingUser);
+  return toResponse(deletedPet, requestingUser);
 };
 
 module.exports = {

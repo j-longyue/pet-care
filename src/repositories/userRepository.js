@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const petRepository = require('./petRepository');
 
 const create = async ({ name, username, email, password, role, profile_picture }) => {
   const { rows } = await db.query(

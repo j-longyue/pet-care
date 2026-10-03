@@ -6,7 +6,6 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const specieRoutes = require('./routes/specieRoutes');
 const petRoutes = require('./routes/petRoutes');
-const petAccess = require('./routes/petAccessRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 
 app.use(express.json());
@@ -19,7 +18,6 @@ app.use('/user', userRoutes);
 app.use('/auth', authRoutes);
 app.use('/specie', specieRoutes);
 app.use('/pet', petRoutes);
-app.use('/access', petAccess);
 app.use('/subscription', subscriptionRoutes);
 
 app.use(errorMiddleware);

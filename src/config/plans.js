@@ -1,7 +1,7 @@
 const PLAN_LIMITS = {
     free: {
         ads: true,
-        maxPets: 2,
+        maxPets: 1,
         maxFeedings: 2,
         maxReminders: 2,
         maxContacts: 1,
@@ -14,7 +14,7 @@ const PLAN_LIMITS = {
 
     premium: {
         ads: false,
-        maxPets: 4,
+        maxPets: 2,
         maxFeedings: 4,
         maxReminders: 4,
         maxContacts: 2,
@@ -22,7 +22,7 @@ const PLAN_LIMITS = {
         maxBaths: 2,
         maxDailyReports: 2,
         maxMeasurements: 2,
-        maxPetAccess: 2,
+        maxPetAccess: 1,
         subscriptions: [
             "monthly_premium",
             "semester_premium",
@@ -32,7 +32,7 @@ const PLAN_LIMITS = {
 
     vip: {
         ads: false,
-        maxPets: 400,
+        maxPets: 3,
         maxFeedings: 20,
         maxReminders: 20,
         maxContacts: 20,
@@ -40,7 +40,7 @@ const PLAN_LIMITS = {
         maxBaths: 20,
         maxDailyReports: 20,
         maxMeasurements: 20,
-        maxPetAccess: 10,
+        maxPetAccess: 2,
         subscriptions: [
             "monthly_vip",
             "semester_vip",

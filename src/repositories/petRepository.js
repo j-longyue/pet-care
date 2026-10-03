@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const planLimitRepository = require('./planLimitRepository');
 
 const SORT_COLUMNS = {
   id: 'p.id',
@@ -15,6 +16,11 @@ const ACCESS_JOIN = 'LEFT JOIN pet_access a ON a.pet_id = p.id AND a.user_id = $
 const BASE_SELECT = `
   SELECT p.*, s.specie AS specie_name,
          creator.username AS created_by_username,
+         creator.plan AS owner_plan,
+         (SELECT COUNT(*)::int FROM pets older
+           WHERE older.created_by = p.created_by
+             AND older.deleted_at IS NULL
+             AND (older.created_at, older.id) < (p.created_at, p.id)) AS owner_rank,
          deleter.username AS deleted_by_username,
          a.can_view AS access_can_view,
          a.can_create AS access_can_create,
@@ -32,14 +38,23 @@ const findById = async (id, viewerId = null) => {
   return rows[0];
 };
 
-const create = async (data, userId) => {
-  const { rows } = await db.query(
-    `INSERT INTO pets (specie_id, name, pet_picture, birthday, created_by)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id`,
-    [data.specie_id, data.name, data.pet_picture, data.birthday, userId]
+const createWithLimit = async (data, userId) => {
+  const outcome = await planLimitRepository.runWithLimit(
+    { limitKey: 'maxPets', userId },
+    async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO pets (specie_id, name, pet_picture, birthday, created_by)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id`,
+        [data.specie_id, data.name, data.pet_picture, data.birthday, userId]
+      );
+      return rows[0].id;
+    }
   );
-  return findById(rows[0].id, userId);
+
+  if (outcome.limitReached || outcome.notFound) return outcome;
+
+  return { pet: await findById(outcome.result, userId) };
 };
 
 const findAll = async ({ userId, isAdmin = false, includeDeleted = false, limit, offset, sort }) => {
@@ -107,7 +122,7 @@ const softDelete = async (id, userId) => {
 
 module.exports = {
   SORTABLE_FIELDS,
-  create,
+  createWithLimit,
   findById,
   findAll,
   update,
